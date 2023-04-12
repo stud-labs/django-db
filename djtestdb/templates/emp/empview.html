@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if employee %}
+{% if department %}
+
+<form action="{% url 'emp_store' employee.tablenumber %}" method="post">
+    {% csrf_token %}
+    <fieldset>
+        <legend><h1>Сотрудник отдела '{{ department.name }}' </h1></legend>
+        {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+        <label for="personname">ФИО:</label>
+        <input type="text" name="personname" id="personname" value="{{ employee.personname }}"/>
+        <br/>
+        ...
+        <br/>
+        <input type="submit" value="Сохранить"/>
+    </fieldset>
+</form>
+
+<ul>
+  {% for e in employees %}
+  <li><a href="/emp/employee/{{ e.tablenumber }}/">{{ e.personname }}</a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p> Что-то не так с данными по отделу сотрудника. Обратитесь к администратору. </p>
+{% endif %}
+{% else %}
+<p>Сотрудник не найден!</p>
+{% endif %}
+
+
+{% endblock %}

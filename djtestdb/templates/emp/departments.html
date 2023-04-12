@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if departments %}
+<ul>
+  {% for d in departments %}
+  <li><a href="/emp/department/{{ d.number }}/">{{ d.name }}</a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>Отделы еще не заданы! {{ departments }}</p>
+{% endif %}
+
+
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if department %}
+{% if employees %}
+
+<ul>
+  {% for e in employees %}
+  <li><a href="/emp/employee/{{ e.tablenumber }}/">{{ e.personname }}</a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p> Список сотрудников пока пуст... </p>
+{% endif %}
+{% else %}
+<p>Отдел не найден!</p>
+{% endif %}
+
+
+{% endblock %}

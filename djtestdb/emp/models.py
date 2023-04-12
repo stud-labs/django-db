@@ -9,8 +9,6 @@ from django.db import models
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 
-from django.db import models
-
 
 class Department(models.Model):
     number = models.UUIDField(primary_key=True)
@@ -18,7 +16,7 @@ class Department(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'department'
+        db_table = "department"
 
 
 class Employee(models.Model):
@@ -27,10 +25,10 @@ class Employee(models.Model):
     email = models.CharField(max_length=30, blank=True, null=True)
     jobposition = models.CharField(max_length=30, blank=True, null=True)
     tablenumber = models.IntegerField(primary_key=True)
-    department = models.ForeignKey(Department, models.DO_NOTHING, db_column='department')
+    department = models.ForeignKey(
+        Department, models.DO_NOTHING, db_column="department"
+    )
 
     class Meta:
         managed = False
-        db_table = 'employee'
-
-
+        db_table = "employee"
