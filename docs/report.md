@@ -1,4 +1,27 @@
 
+### Представление для таблицы ```Employee```
+
+Суть данного представления (View) заключается в порождении виртуальной таблицы, удобной для отображения всей 
+информации о служащем, включая отдел (```Department```), где он работает. Представление, затем, может быть 
+дополнительно упорядочено, спроецировано и т.д. в зависимости от потребностей клиентской программы.
+
+```sql
+CREATE OR REPLACE VIEW public.emp_in_dep
+ AS
+ SELECT e.personname,
+    e.birthdate,
+    e.email,
+    e.jobposition,
+    e.tablenumber,
+    e.department,
+    d.name
+   FROM employee e
+     JOIN department d ON d.number = e.department;
+
+ALTER TABLE public.emp_in_dep
+    OWNER TO dbstudent;
+```
+
 
 ### Тестирование добавления, удаление, обновления процедур над таблицей Employee
 
@@ -107,4 +130,29 @@ Time: 0.002s
 
 ```
 
+Добавление а) нового служащего под существующим табельным номером и б) 
 
+```text
+dbstudent@(none):test> call "INSERT_EMPLOYEE"(
+     'Jud Lee',
+     '1978-01-01',
+     'jud@example.com',
+     'janitor',
+     502,
+     UUID('b9ccd2e0-5e75-4740-86df-7a050071de72')
+ );
+There is no department identified by b9ccd2e0-5e75-4740-86df-7a050071de72.
+CONTEXT:  функция PL/pgSQL "INSERT_EMPLOYEE"(character varying,date,character varying,>
+Time: 0.003s
+dbstudent@(none):test> call "INSERT_EMPLOYEE"(
+     'Jud Lee',
+     '1978-01-01',
+     'jud@example.com',
+     'janitor',
+     501,
+     UUID('b9ccd2e0-5e75-4740-86df-7a050071de72')
+ );
+There is Employee with table number 501. No insertion wasperformed!
+CONTEXT:  функция PL/pgSQL "INSERT_EMPLOYEE"(character varying,date,character varying,>
+Time: 0.003s
+```
