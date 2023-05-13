@@ -450,3 +450,129 @@ There is Employee with table number 501. No insertion was performed!
 CONTEXT:  функция PL/pgSQL "INSERT_EMPLOYEE"(character varying,date,character varying,>
 Time: 0.003s
 ```
+
+## Встроенные процедуры для порождения выходных документов
+
+Первый выходной документ (отчет) - выдать количество сотруднков в каждом отделе и всех
+сотруднков отдела. Количество сотрудников будем дублировать в каждой строке, при составлении текста
+отчета эту цифру можно взять в любой строке, а столбец не выводить.
+
+Запрос реализован в виде ```plpgsql```-функции, возвращающую таблицу.  Такая функция используется в
+запросе ```SELECT``` (см. в разделе тестирования примеры использования).
+
+```plpgsql
+CREATE OR REPLACE FUNCTION public."COUNT_EMP_IN_DEPS"(
+	filter boolean,
+	mdepartment uuid)
+    RETURNS TABLE (
+		personname character varying(30),
+    	birthdate date,
+    	email character varying(30),
+    	jobposition character varying(30),
+    	tablenumber integer,
+    	department uuid,
+    	"name" text,
+		countemps bigint
+	)
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+    ROWS 1000
+
+AS $BODY$
+BEGIN
+	IF filter
+	THEN
+		RETURN QUERY
+		SELECT
+			e.personname,
+    		e.birthdate,
+    		e.email,
+    		e.jobposition,
+    		e.tablenumber,
+    		e.department,
+    		e."name",
+			ce.countemps
+		FROM emp_in_dep e,
+			(SELECT count(e.tablenumber) as countemps FROM emp_in_dep e
+			 WHERE e.department=mdepartment GROUP BY e.department) as ce
+			WHERE e.department=mdepartment;
+	ELSE
+		RETURN QUERY
+		SELECT
+			e.personname,
+    		e.birthdate,
+    		e.email,
+    		e.jobposition,
+    		e.tablenumber,
+    		e.department,
+    		e."name",
+			ce.countemps
+		FROM emp_in_dep e JOIN
+			(SELECT count(e.tablenumber) as countemps, e.department as dn FROM emp_in_dep e
+			 GROUP BY e.department) as ce
+		ON ce.dn=e.department;
+	END IF;
+END
+$BODY$;
+
+ALTER FUNCTION public."COUNT_EMP_IN_DEPS"(boolean, uuid)
+    OWNER TO dbstudent;
+```
+
+
+### Тестирование первого выходного документа
+
+Таблица дополнена данными, чтоб в одном из отделов было несколько работников.
+
+```text
+dbstudent@(none):test> select * from emp_in_dep;
++------------------+------------+-----------------+-------------+-------------+--------------------------------------+------+
+| personname       | birthdate  | email           | jobposition | tablenumber | department                           | name |
+|------------------+------------+-----------------+-------------+-------------+--------------------------------------+------|
+| Jud Lee 4-th     | 1978-01-01 | jud@example.com | janitor     | 503         | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT |
+| Jud Lee 1        | 1978-01-01 | jud@example.com | janitor     | 502         | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT |
+| Jud Lee the 4-th | 1977-02-01 | jud@example.com | Janitor     | 501         | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT |
+| Samanta Fox 4    | <null>     | <null>          | <null>      | 40          | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT |
+| Suzy             | <null>     | <null>          | <null>      | 401         | 285242ac-fa97-4ccb-b56f-d8651db8982d | IMIT |
++------------------+------------+-----------------+-------------+-------------+--------------------------------------+------+
+SELECT 5
+Time: 0.007s
+```
+
+Запрос по одному из отделов
+
+```text
+dbstudent@(none):test> select * from "COUNT_EMP_IN_DEPS"(True, UUID('b9ccd2e0-5e75-4740-86df-7a050071de7f'));
++------------------+------------+-----------------+-------------+-------------+--------------------------------------+------+-----------+
+| personname       | birthdate  | email           | jobposition | tablenumber | department                           | name | countemps |
+|------------------+------------+-----------------+-------------+-------------+--------------------------------------+------+-----------|
+| Samanta Fox 4    | <null>     | <null>          | <null>      | 40          | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT | 4         |
+| Jud Lee the 4-th | 1977-02-01 | jud@example.com | Janitor     | 501         | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT | 4         |
+| Jud Lee 1        | 1978-01-01 | jud@example.com | janitor     | 502         | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT | 4         |
+| Jud Lee 4-th     | 1978-01-01 | jud@example.com | janitor     | 503         | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT | 4         |
++------------------+------------+-----------------+-------------+-------------+--------------------------------------+------+-----------+
+SELECT 4
+Time: 0.008s
+```
+
+Запрос по все разделам.
+
+```text
+dbstudent@(none):test> select * from "COUNT_EMP_IN_DEPS"(False, UUID('b9ccd2e0-5e75-4740-86df-7a050071de7f'));
++------------------+------------+-----------------+-------------+-------------+--------------------------------------+------+-----------+
+| personname       | birthdate  | email           | jobposition | tablenumber | department                           | name | countemps |
+|------------------+------------+-----------------+-------------+-------------+--------------------------------------+------+-----------|
+| Samanta Fox 4    | <null>     | <null>          | <null>      | 40          | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT | 4         |
+| Jud Lee the 4-th | 1977-02-01 | jud@example.com | Janitor     | 501         | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT | 4         |
+| Jud Lee 1        | 1978-01-01 | jud@example.com | janitor     | 502         | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT | 4         |
+| Jud Lee 4-th     | 1978-01-01 | jud@example.com | janitor     | 503         | b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT | 4         |
+| Suzy             | <null>     | <null>          | <null>      | 401         | 285242ac-fa97-4ccb-b56f-d8651db8982d | IMIT | 1         |
++------------------+------------+-----------------+-------------+-------------+--------------------------------------+------+-----------+
+SELECT 5
+Time: 0.009s
+```
+
+# Тестирование работы запроса для  второго документа
+
+(делается аналогично, результат в отчет)
