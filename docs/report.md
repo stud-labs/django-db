@@ -33,7 +33,7 @@ ALTER TABLE public.emp_in_dep
 2. Не должно быть повторений адреса email (не реализовано).
 3. Отдел, куда добавляется сотрудник должен существовать.
 
-```sql
+```plpgsql
 CREATE OR REPLACE PROCEDURE public."INSERT_EMPLOYEE"(
 	IN mpersonname character varying,
 	IN mbirthdate date,
