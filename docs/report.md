@@ -14,19 +14,28 @@
 Если одно о из условий не соблюдается, выдать информативное сообщение.
 
 ```plpgsql
-dbstudent@(none):test> call "DELETE_DEPARTMENT"(UUID('69fa8510-0cc9-4235-8aef-ee2e84acad51'));
-CALL
-Time: 0.002s
-dbstudent@(none):test> select * from department;
-+--------------------------------------+--------------+
-| number                               | name         |
-|--------------------------------------+--------------|
-| b9ccd2e0-5e75-4740-86df-7a050071de7f | IMIT         |
-| 285242ac-fa97-4ccb-b56f-d8651db8982d | IMIT         |
-| 007557e5-beca-4891-ae44-0448c777437e | Geographical |
-+--------------------------------------+--------------+
-SELECT 3
-Time: 0.006s
+CREATE OR REPLACE PROCEDURE public."DELETE_DEPARTMENT"(
+	IN mnumber uuid)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+ 	IF NOT EXISTS (SELECT number FROM department WHERE number=mnumber)
+ 	THEN
+ 		RAISE EXCEPTION 'There is no department with id %.', mnumber;
+ 	END IF;
+	IF EXISTS (SELECT tablenumber FROM employee e WHERE e.department=mnumber)
+	THEN
+		RAISE EXCEPTION 'There are employees in the depatment %. No deletion done!', mnumber;
+	END IF;
+	DELETE FROM department WHERE number=mnumber;
+END
+
+$BODY$;
+ALTER PROCEDURE public."DELETE_DEPARTMENT"(uuid)
+    OWNER TO dbstudent;
+
+COMMENT ON PROCEDURE public."DELETE_DEPARTMENT"(uuid)
+    IS 'Удаляет отдел, если это семантически возможно.';
 ```
 
 ### Тестирование встроенных процедур для таблицы ```Department```
