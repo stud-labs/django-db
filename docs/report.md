@@ -1,4 +1,80 @@
-## Встроенные процедуры для таблицв ```Department```
+
+
+# Лабораторная работа 2 "Разработка серверной части информационной системы"
+
+В данной лабораторной работе необходимо разработать серверную часть гипотетической информационной системы.
+Перечень задач, которые требуется решить следующие:
+
+1. Сгенерировать из *физической модели*, спроектированной в лабораторной работе 1, набор DML-запросов создания базы данных.
+2. Зполнить накоторыми начальными данными талицы (в качестве примера можно использовать примеры из лабораторной работы 1).
+3. Спроектировать представления (View) и встроенные процедуры для
+   * подержки содержательного отображения данных таблиц для лабораторной работы 3,
+   * корректного с точки зрения предметной области изменения наборов кортежей всех таблиц,
+   * реализации выходных документов (регламентных отчетов).
+4. Провести тестирование представлений и процедур.
+
+(в отчете пишем уже результат работы - проектирования)
+
+## Сценарий создания таблиц для СУБД PostgreSQL-14
+
+### Таблица ```Depatment```
+
+(можете расставить комментарии, как это сделалано здесь)
+
+```sql
+CREATE TABLE IF NOT EXISTS public.department
+(
+    "number" uuid NOT NULL DEFAULT gen_random_uuid(),   -- порождается автоматом при добавлении,
+                                                        -- если не указан
+    name text COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "Department_pkey" PRIMARY KEY ("number") -- первичный ключ
+    -- по идее надо было добавить UNIQUE на name еще (см. далее)
+)
+
+-- Далее идет настройка владения таблицей и ее вербальное описание
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.department
+    OWNER to dbstudent;
+
+COMMENT ON TABLE public.department
+    IS 'Department of an organization';
+```
+
+### Таблица ```Employee```
+
+```sql
+CREATE TABLE IF NOT EXISTS public.employee
+(
+    personname character varying(30) COLLATE pg_catalog."default",
+    birthdate date,
+    email character varying(30) COLLATE pg_catalog."default",
+    jobposition character varying(30) COLLATE pg_catalog."default",
+    tablenumber integer NOT NULL, -- естественное ограничение для первичного ключа
+    department uuid NOT NULL,     -- ограничение, недозволяющее сотруднику болтаться вне отдела
+    CONSTRAINT employee_tablenumber_pk PRIMARY KEY (tablenumber), -- первичный ключ
+    CONSTRAINT empl_dep_fk FOREIGN KEY (department)
+        REFERENCES public.department ("number") MATCH SIMPLE      -- внешний ключ на "Depatment"
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.employee
+    OWNER to dbstudent;
+```
+
+Таким образом, мы представили отношение ```1:N```. Теперь будем называть таблицу ```Depatment``` "основной",
+а таблицу ```Employee``` "зависимой", т.к. она ссылается полем ```department``` на основную таблицу.
+
+Вообще, в терминологии тут бывает путаница.  Например, если удалять записи из ```Department```, то надо сначала проверить, еслть ли в ```Employee``` сотрудники, привязанные к удаляемому отделу. Получается, что результат удаления записи зависит от содержимого ```Employee```, т.е. ```Department``` зависит от ```Employee```.
+С другой стороны, если мы добавляем сотрудника, то его надо добавлять в уже существующий отдел, т.е. манипуляция над ```Employee``` зависит от ```Depatment```.
+
+Разбирайтесь внимательно в каждом конкретном случае, что имеется ввиду под *зависимостью*.
+
+## Встроенные процедуры для таблицв ```Department``` для СУБД PostgreSQL-14
 
 (Здесь я их пропускаю, т.к. они проще, чем те, что у ```Employee```, за исключением удаления)
 
@@ -370,7 +446,7 @@ dbstudent@(none):test> call "INSERT_EMPLOYEE"(
      501,
      UUID('b9ccd2e0-5e75-4740-86df-7a050071de72')
  );
-There is Employee with table number 501. No insertion wasperformed!
+There is Employee with table number 501. No insertion was performed!
 CONTEXT:  функция PL/pgSQL "INSERT_EMPLOYEE"(character varying,date,character varying,>
 Time: 0.003s
 ```
