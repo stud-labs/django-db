@@ -4,8 +4,8 @@
 
 ### Представление для таблицы ```Employee```
 
-Суть данного представления (View) заключается в порождении виртуальной таблицы, удобной для отображения всей 
-информации о служащем, включая отдел (```Department```), где он работает. Представление, затем, может быть 
+Суть данного представления (View) заключается в порождении виртуальной таблицы, удобной для отображения всей
+информации о служащем, включая отдел (```Department```), где он работает. Представление, затем, может быть
 дополнительно упорядочено, спроецировано и т.д. в зависимости от потребностей клиентской программы.
 
 ```sql
@@ -32,6 +32,9 @@ ALTER TABLE public.emp_in_dep
 1. Не должно быть повторного табельного номера (первичный ключ).
 2. Не должно быть повторений адреса email (не реализовано).
 3. Отдел, куда добавляется сотрудник должен существовать.
+
+Проблемы, выявленные в процессе выполнения операции указываются при помощи исключений с
+содержательными сообщениями.
 
 ```plpgsql
 CREATE OR REPLACE PROCEDURE public."INSERT_EMPLOYEE"(
@@ -67,7 +70,67 @@ COMMENT ON PROCEDURE public."INSERT_EMPLOYEE"(character varying, date, character
     IS 'Insert new Employee';
 ```
 
-### Тестирование добавления, удаление, обновления процедур над таблицей Employee
+### Удаление служащего
+
+При удалении служащего необходимо проверить его наличие в таблице ```Employee```. Если его там нет, вывести
+информативное сообщение при помощи создания исключения.
+
+
+```plpgsql
+CREATE OR REPLACE PROCEDURE public."DELETE_EMPLOYEE"(
+	IN mtablenumber integer)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+	IF NOT EXISTS (SELECT tablenumber FROM Employee WHERE tablenumber=mtablenumber)
+	THEN
+		RAISE EXCEPTION 'There is no Employee with table number %!', mtablenumber;
+	ELSE
+		DELETE FROM public.employee WHERE tablenumber=mtablenumber;
+	END IF;
+END
+$BODY$;
+ALTER PROCEDURE public."DELETE_EMPLOYEE"(integer)
+    OWNER TO dbstudent;
+```
+
+### Обновление служащего
+
+При обновлении служащего проверяется его существование по табельному номеру (едиственный параметр процедуры).
+
+```plpgsql
+CREATE OR REPLACE PROCEDURE public."UPDATE_EMPLOYEE"(
+	IN mpersonname character varying,
+	IN mbirthdate date,
+	IN memail character varying,
+	IN mjobposition character varying,
+	IN mtablenumber integer)
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+-- tablenumber is the primary key, so it is not updatable
+	IF EXISTS (SELECT tablenumber FROM Employee WHERE tablenumber=mtablenumber)
+	THEN
+		UPDATE public.employee
+			SET
+			personname=mpersonname, birthdate=mbirthdate,
+			email=memail, jobposition=mjobposition  -- ,
+												-- tablenumber=?, department=?
+			WHERE tablenumber = mtablenumber;
+	ELSE
+		RAISE EXCEPTION 'There is no Employee with table number %.', mtablenumber;
+	END IF;
+END
+$BODY$;
+ALTER PROCEDURE public."UPDATE_EMPLOYEE"(character varying, date, character varying, character varying, integer)
+    OWNER TO dbstudent;
+
+COMMENT ON PROCEDURE public."UPDATE_EMPLOYEE"(character varying, date, character varying, character varying, integer)
+    IS 'Update Employee data';
+```
+
+
+### Тестирование добавления, удаления, обновления процедур над таблицей Employee
 
 ```text
 dbstudent@(none):test> select * from emp_in_dep;
@@ -114,10 +177,10 @@ SELECT 3
 Time: 0.007s
 dbstudent@(none):test> call "UPDATE_EMPLOYEE"(
      'Jud Lee the 4-th',
-     '1977-02-01', 
+     '1977-02-01',
      'jud@example.com',
      'Janitor',
-     501 
+     501
  );
 CALL
 Time: 0.002s
@@ -155,7 +218,7 @@ Time: 0.007s
 ```text
 dbstudent@(none):test> call "UPDATE_EMPLOYEE"(
      'Jud Lee the 4-th',
-     '1977-02-01', 
+     '1977-02-01',
      'jud@example.com',
      'Janitor',
      505
@@ -174,7 +237,7 @@ Time: 0.002s
 
 ```
 
-Добавление а) нового служащего под существующим табельным номером и б) 
+Добавление а) нового служащего под существующим табельным номером и б)
 
 ```text
 dbstudent@(none):test> call "INSERT_EMPLOYEE"(
