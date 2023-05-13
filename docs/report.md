@@ -14,13 +14,6 @@ dbstudent@(none):test> select * from emp_in_dep;
 SELECT 3
 Time: 0.008s
 dbstudent@(none):test> call "DELETE_EMPLOYEE"(501);
-отношение "emoployee" не существует
-LINE 1: NOT EXISTS (SELECT tablenumber FROM Emoployee WHERE tablenum...
-                                            ^
-QUERY:  NOT EXISTS (SELECT tablenumber FROM Emoployee WHERE tablenumber=mtablenumber)
-CONTEXT:  функция PL/pgSQL "DELETE_EMPLOYEE"(integer), строка 3, оператор IF
-Time: 0.002s
-dbstudent@(none):test> call "DELETE_EMPLOYEE"(501);
 CALL
 Time: 0.001s
 dbstudent@(none):test> select * from emp_in_dep;
