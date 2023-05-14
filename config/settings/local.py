@@ -11,7 +11,8 @@ SECRET_KEY = env(
     default="odd0j1NZ8dmXEMBdmJXta8FItovYqOcXlMmUPPA4iSD6FwqGT3DFoD1e29ErY3M3",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "imp.isclan.ru"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "imp.isclan.ru",
+                 "[fc93:73ce:e818:be46:9e88::1]", "192.168.191.46"]
 
 # CACHES
 # ------------------------------------------------------------------------------

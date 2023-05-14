@@ -11,6 +11,18 @@ License: GPLv3
 
 Moved to [settings](http://cookiecutter-django.readthedocs.io/en/latest/settings.html).
 
+
+## Установка Django и других модулей
+
+Сначала установить виртуальную среду Python
+
+```bash
+cd djabgo-db
+pip install -r requirements/local.txt  # для запуска проекта локально
+npm install                            # установка поддержки веббраузера
+npm run build                          # создание ресурсов webpack
+```
+
 ## Basic Commands
 
 ### Setting Up Your Users
