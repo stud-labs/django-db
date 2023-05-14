@@ -2,11 +2,33 @@
 {% block content %}
 
 {% if departments %}
-<ul>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th scope="col">Название</th>
+            <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody>
   {% for d in departments %}
-  <li><a href="/emp/department/{{ d.number }}/">{{ d.name }}</a></li>
+  <tr>
+    <td><a href="/emp/department/{{ d.number }}/">{{ d.name }}</a></td>
+    <td>
+      <div class="btn-group" role="group" aria-label="bg-editing">
+        <a class="btn btn-primary"
+           href="/emp/department/{{ e.tablenumber }}">Редактировать</a>
+        <a class="btn btn-danger"
+           href="/emp/department-rm/{{ e.tablenumber }}/0">Удалить</a>
+      </div>
+    </td>
+  </tr>
   {% endfor %}
-</ul>
+  <tr>
+      <td></td><td></td>
+      <td><a href="/emp/depatment-add/" class="btn btn-success">Добавить отдел</a></td>
+  </tr>
+  </tbody>
+</table>
 {% else %}
 <p>Отделы еще не заданы! {{ departments }}</p>
 {% endif %}

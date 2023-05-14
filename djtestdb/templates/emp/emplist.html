@@ -4,11 +4,37 @@
 {% if department %}
 {% if employees %}
 
-<ul>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">Фио</th>
+            <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody>
   {% for e in employees %}
-  <li><a href="/emp/employee/{{ e.tablenumber }}/">{{ e.personname }}</a></li>
+  <tr><td>{{e.tablenumber}}</td>
+      <td>
+      <a href="/emp/employee/{{ e.tablenumber }}/">{{ e.personname }}</a>
+      </td>
+      <td>
+          <div class="btn-group" role="group" aria-label="bg-editing">
+              <a class="btn btn-primary"
+                 href="/emp/employee/{{ e.tablenumber }}">Редактировать</a>
+              <a class="btn btn-danger"
+                 href="/emp/employee-rm/{{ e.tablenumber }}/0">Удалить</a>
+          </div>
+      </td>
+  </tr>
   {% endfor %}
-</ul>
+  <tr>
+      <td></td><td></td>
+      <td><a href="/emp/employee-add/{{ department.number }}" class="btn btn-success">Добавить сотрудника</a></td>
+  </tr>
+  </tbody>
+</table>
+
 {% else %}
 <p> Список сотрудников пока пуст... </p>
 {% endif %}

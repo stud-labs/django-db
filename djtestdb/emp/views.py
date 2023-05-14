@@ -4,6 +4,8 @@ from django.urls import reverse
 
 from .models import Department, Employee
 
+from django.db import connection
+from django.contrib import messages
 #####
 
 
@@ -39,11 +41,46 @@ def emp_view(request, tablenumber):
     context = {"employee": employee, "department": department}
     return render(request, "emp/empview.html", context)
 
+def emp_new(request, depno):
+    """Форма - добавления нового сотрудника"""
+    employee = Employee(tablenumber=0)
+    department = Department.objects.get(number__exact=depno)
+    context = {"employee": employee, "department": department}
+    return render(request, "emp/empview.html", context)
 
 def emp_store(request, tablenumber):
     """Процедура сохранения данных сотрудника"""
-    employee = Employee.objects.get(tablenumber__exact=tablenumber)
-    employee.personname = request.POST["personname"]
-    employee.save()
+    flds='personname birthdate email jobposition tablenumber'
+    # employee = Employee.objects.get(tablenumber__exact=tablenumber)
+    vls = [request.POST[k] for k in flds.split()]
+    # employee.personname = request.POST["personname"]
+    # employee.save()
+    with connection.cursor() as cursor:
+        if tablenumber!=0:
+            cursor.execute('call "UPDATE_EMPLOYEE"(%s,%s,%s,%s,%s);',vls)
+            cursor.execute('commit;')
+            messages.success(request,"The employee has been updated!")
+        else:
+            depmo = request.POST["depno"]
+            vls[4] = -1
+            cursor.execute('call "INSERT_EMPLOYEE"(%s,%s,%s,%s,%s,%s);',vls+[depmo])
+            cursor.execute('commit;')
+            messages.success(request,"The employee has been added!")
+
     return HttpResponseRedirect(reverse("dep_index"))
     # return HttpResponseRedirect(reverse("emp_view"), args=(tablenumber,))
+
+
+def emp_rm(request, tablenumber, confirm):
+    """Форма-запрос на подтверждение удаления сотрудника """
+    if confirm!=1:
+        employee = Employee.objects.get(tablenumber__exact=tablenumber)
+        department = Department.objects.get(number__exact=employee.department.number)
+        context = {"employee": employee, "department": department}
+        return render(request, "emp/emprm.html", context)
+    else:
+        with connection.cursor() as cursor:
+            cursor.execute('call "DELETE_EMPLOYEE"(%s);', (tablenumber,))
+            cursor.execute('commit;')
+            messages.success(request,"The employee has been deleted!")
+            return HttpResponseRedirect(reverse("dep_index"))

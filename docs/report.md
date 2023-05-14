@@ -696,3 +696,4 @@ admin.site.register(Department)
 3. Удобный консольный клиент ```pgcli <dbstudent или ваша БД> dbstudent```. Пример ```pgcli test dbstudent```.
 4. Проект https://github.com/stud-labs/django-db/ (Django 4.0)
 5. Документация по Django - https://docs.djangoproject.com/en/4.2/
+6. Генератор проектов Django - https://cookiecutter-django.readthedocs.io/en/latest/developing-locally.html
