@@ -9,4 +9,5 @@ urlpatterns = [
     path("employee-rm/<int:tablenumber>/<int:confirm>", views.emp_rm, name="emp_rm"),
     path("employee/<int:tablenumber>/store/", views.emp_store, name="emp_store"),
     path("employee-add/<str:depno>/", views.emp_new, name="emp_new"),
+    path("department-report/<str:depno>/", views.dep_rep, name="dep_rep"),
 ]

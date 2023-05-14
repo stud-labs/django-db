@@ -1,11 +1,15 @@
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_list_or_404, get_object_or_404, render
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 
 from .models import Department, Employee
 
 from django.db import connection
 from django.contrib import messages
+from recordclass import recordclass
+
+
 #####
 
 
@@ -84,3 +88,57 @@ def emp_rm(request, tablenumber, confirm):
             cursor.execute('commit;')
             messages.success(request,"The employee has been deleted!")
             return HttpResponseRedirect(reverse("dep_index"))
+
+
+def namedtuplefetchall(cursor, fields = [], f=None):
+    """
+    Return all rows from a cursor as a namedtuple.
+    Assume the column names are unique.
+    """
+    desc = cursor.description
+    nt_result = recordclass("Result", [col[0] for col in desc] + fields)
+    vs = [None] * len(fields)
+    def _(row):
+        ntr = nt_result(*list(row)+vs)
+        if callable(f):
+            return f(ntr)
+        else:
+            return ntr
+    return [_(row) for row in cursor.fetchall()]
+
+
+
+def dep_rep(request, depno):
+    """Report 1 generator for a departement or departments.
+    If depno == 0 generate for all the departments
+    """
+    filter = False
+    department = None
+    try:
+        department = Department.objects.get(number__exact=depno)
+        filter = True
+    except ValidationError:
+        depno="285242ac-fa97-4ccb-b56f-000000000000"
+        pass
+
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT * from "COUNT_EMP_IN_DEPS"(%s,%s)', (filter,depno))
+        def iid(x):
+            return x
+
+        def f(r):
+            global pd
+
+        result = namedtuplefetchall(cursor, ["last"], iid)
+        if result:
+            pd = result[0].department
+            ll = len(result)-1
+            for i,r in enumerate(result):
+                r.last=False
+                if pd != r.department:
+                    result[i-1].last = True
+                    pd = r.department
+                if i==ll:
+                    r.last = True
+        context = {"result":result, "department":department}
+        return render(request, "emp/deprep.html", context)
