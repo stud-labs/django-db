@@ -37,6 +37,7 @@
 
 {% else %}
 <p> Список сотрудников пока пуст... </p>
+<a href="/emp/employee-add/{{ department.number }}" class="btn btn-success">Добавить сотрудника</a>
 {% endif %}
 {% else %}
 <p>Отдел не найден!</p>

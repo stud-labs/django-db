@@ -7,6 +7,7 @@
         <tr>
             <th scope="col">Название</th>
             <th scope="col"></th>
+            <th scope="col"></th>
         </tr>
     </thead>
     <tbody>
@@ -16,15 +17,17 @@
     <td>
       <div class="btn-group" role="group" aria-label="bg-editing">
         <a class="btn btn-primary"
-           href="/emp/department/{{ e.tablenumber }}">Редактировать</a>
+           href="/emp/department/{{ d.number }}">Редактировать</a>
         <a class="btn btn-danger"
-           href="/emp/department-rm/{{ e.tablenumber }}/0">Удалить</a>
+           href="/emp/department-rm/{{ d.number }}/0">Удалить</a>
       </div>
     </td>
+    <td><a href="/emp/depatment-report/{{ d.number }}/" class="btn btn-secondary">Отчет</a></td>
   </tr>
   {% endfor %}
   <tr>
-      <td></td><td></td>
+      <td></td>
+      <td><a href="/emp/depatment-report/0/" class="btn btn-secondary">Отчет по всем отделам</a></td>
       <td><a href="/emp/depatment-add/" class="btn btn-success">Добавить отдел</a></td>
   </tr>
   </tbody>
