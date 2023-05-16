@@ -2,13 +2,14 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_list_or_404, get_object_or_404, render
 from django.urls import reverse
 from django.core.exceptions import ValidationError
+from django.db.utils import InternalError
 
 from .models import Department, Employee
 
 from django.db import connection
 from django.contrib import messages
 from recordclass import recordclass
-
+import inspect
 
 #####
 
@@ -61,15 +62,23 @@ def emp_store(request, tablenumber):
     # employee.save()
     with connection.cursor() as cursor:
         if tablenumber!=0:
-            cursor.execute('call "UPDATE_EMPLOYEE"(%s,%s,%s,%s,%s);',vls)
-            cursor.execute('commit;')
-            messages.success(request,"The employee has been updated!")
+            try:
+                cursor.execute('call "UPDATE_EMPLOYEE"(%s,%s,%s,%s,%s);',vls)
+                cursor.execute('commit;')
+                messages.success(request,"The employee has been updated!")
+            except InternalError as e:
+                msg = str(e).split("CONTEXT")[0]
+                messages.error(request, msg)
         else:
-            depmo = request.POST["depno"]
-            vls[4] = -1
-            cursor.execute('call "INSERT_EMPLOYEE"(%s,%s,%s,%s,%s,%s);',vls+[depmo])
-            cursor.execute('commit;')
-            messages.success(request,"The employee has been added!")
+            try:
+                depmo = request.POST["depno"]
+                vls[4] = -1
+                cursor.execute('call "INSERT_EMPLOYEE"(%s,%s,%s,%s,%s,%s);',vls+[depmo])
+                cursor.execute('commit;')
+                messages.success(request,"The employee has been added!")
+            except InternalError as e:
+                msg = str(e).split("CONTEXT")[0]
+                messages.error(request, msg)
 
     return HttpResponseRedirect(reverse("dep_index"))
     # return HttpResponseRedirect(reverse("emp_view"), args=(tablenumber,))
@@ -84,10 +93,14 @@ def emp_rm(request, tablenumber, confirm):
         return render(request, "emp/emprm.html", context)
     else:
         with connection.cursor() as cursor:
-            cursor.execute('call "DELETE_EMPLOYEE"(%s);', (tablenumber,))
-            cursor.execute('commit;')
-            messages.success(request,"The employee has been deleted!")
-            return HttpResponseRedirect(reverse("dep_index"))
+            try:
+                cursor.execute('call "DELETE_EMPLOYEE"(%s);', (tablenumber,))
+                cursor.execute('commit;')
+                messages.success(request,"The employee has been deleted!")
+                return HttpResponseRedirect(reverse("dep_index"))
+            except InternalError as e:
+                msg = str(e).split("CONTEXT")[0]
+                messages.error(request, msg)
 
 
 def namedtuplefetchall(cursor, fields = [], f=None):
