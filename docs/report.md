@@ -724,7 +724,13 @@ urlpatterns = [
 
 ## Представления интерфейса таблиц/объектов БД
 
-Модель представления объектов предметной области, реализованная в Django, близка к Model-View-ViewModel (MVVM) (https://ru.wikipedia.org/wiki/Model-View-ViewModel).
+Модель представления объектов предметной области, реализованная в Django, близка к Model-View-Presenter (MVP) (https://ru.wikipedia.org/wiki/Model-View-ViewModel). Бользователь видит интерфейс, т.е. HTML-страницу, сгенерированную ```view```-функцией. При нажатии кнопок ```submit``` осуществляется запуск ```view```-функций Python, модифицирующих модель (Model). Таким образом, ```veiew```-функция играют роль Presenter. А сгенерированная страница, которую видит пользователь - это View в модели MVP.
+
+Истолрически наиболее известный (самый "ранний") шаблон проектирования пользовательского инерфейса - это MVC (Model-View-Controller) (https://ru.wikipedia.org/wiki/Model-View-Controller). Роли компонентам принято назначать согласно этому шаблону, однако название ```view``` у ```view```-функций получается опять неправильным в Django, т.к. они играют роль и Controller и подсистемы порождения View.
+
+Есть еще один шаблон проектирования - MVVM (Model-View-ViewModel) (https://ru.wikipedia.org/wiki/Model-View-ViewModel). В нем предполагается, что интерфейс пользователя взаимодействует с виртуальным представлением модели объекта (ViewModel), представленного в интерфейсе (например, совокупности данных Отдел-Сотрудник), а уже этот ViewModel-объект взаимдействует с моделями предметной области (кортежами в БД, например, или представлением кортежей в виде экземпляров ORM). Но в случае с Django так делать не принято, т.е. создавать это промежуточный слой ViewModel.
+
+В связи с этим обвиними разработчиков Django виноватыми за путаницу с шаблонами проектирования, ну, конечно, допустим, что, вероятно, мы не в курсе их теоретических изысканий новых шаблонов проектирования...
 
 ### Файл обработиков запросов ```views.py```
 
@@ -767,7 +773,7 @@ def index(request):
 
 Представление ```index``` содержит только стандартный первый параметр ```request```, содержвщий полную информацию о запросе с вебраузера клиента. Дополнительных пераметров не предусмотрено, т.к. домашняя страница приложения ```emp``` не подразумевает какого-либо коннтекста, т.е. эта страница предназначена для ввода самого первого действия пользователя.
 
-В данном интерфейсе список отделов представляется в виде таблицы. В каждую стоку добавляются кнопки перехода на формы, реализующиеоперации с данными таблицы отделов. Используется общий шаблон, в функции кторого входит отображение сообщений об шибках и успешно выполненных операциях.
+В данном интерфейсе список отделов представляется в виде таблицы. В каждую стоку добавляются кнопки перехода на формы, реализующиеоперации с данными таблицы отделов. После таблицы втавлена кнопка добавления нового отдела. Данным файлом используется общий для всех последующих фалов интерфйесов  шаблон, в функции кторого входит отображение сообщений об шибках и успешно выполненных операциях.
 
 ```html
 <!-- emp/departments.html -->
@@ -827,6 +833,58 @@ def emp_index(request, number):
     return render(request, "emp/emplist.html", context)
 ```
 
+Структура интерфейса отображения списка сотрудников. Отличие от предыдущего файла интерфейса - измененная структура отображения данных о сотруднике, реализованная в соответствии со структурой данных таблицы ```Employee```.
+
+```html
+<!-- emp/emplist.html -->
+{% extends "base.html" %}
+{% block content %}
+
+{% if department %}
+{% if employees %}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">Фио</th>
+            <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody>
+  {% for e in employees %}
+  <tr><td>{{e.tablenumber}}</td>
+      <td>
+      <a href="/emp/employee/{{ e.tablenumber }}/">{{ e.personname }}</a>
+      </td>
+      <td>
+          <div class="btn-group" role="group" aria-label="bg-editing">
+              <a class="btn btn-primary"
+                 href="/emp/employee/{{ e.tablenumber }}">Редактировать</a>
+              <a class="btn btn-danger"
+                 href="/emp/employee-rm/{{ e.tablenumber }}/0">Удалить</a>
+          </div>
+      </td>
+  </tr>
+  {% endfor %}
+  <tr>
+      <td></td><td></td>
+      <td><a href="/emp/employee-add/{{ department.number }}" class="btn btn-success">Добавить сотрудника</a></td>
+  </tr>
+  </tbody>
+</table>
+
+{% else %}
+<p> Список сотрудников пока пуст... </p>
+<a href="/emp/employee-add/{{ department.number }}" class="btn btn-success">Добавить сотрудника</a>
+{% endif %}
+{% else %}
+<p>Отдел не найден!</p>
+{% endif %}
+
+{% endblock %}
+```
+
 Просмотр и редактирование сотрудника - отображение формы.
 
 ```pyton
@@ -838,7 +896,65 @@ def emp_view(request, tablenumber):
     return render(request, "emp/empview.html", context)
 ```
 
-Форма добавления нового сотрудника - отображение формы. Отличие от предыдущего представления изменен процесс порождения данных контекста: сотрудник - новый пустой объект, данные отдела получаются из параметра.
+Собственно HTML-структура формы для отображения и редактирования данных о сотруднике. Необходимо обратить внимание на строку, помеченную (1). В этой строке производится привязка формы к сессии пользователя - вариант защиты информации: система препятствует использованию HTML формы другими соединениями/сайтами для помещения данных в БД. Если удалить эту строку, будет выдаваться сообщени о невозможности обработать данные формы.
+
+```html
+<!-- emp/empview.html -->
+{% extends "base.html" %}
+{% block content %}
+
+{% if employee %}
+{% if department %}
+
+<form action="{% url 'emp_store' employee.tablenumber %}" method="post">
+    {% csrf_token %}  <!-- (1) -->
+    <legend><h1>Сотрудник отдела '{{ department.name }}' </h1></legend>
+    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+    <div class="form-group">
+        <label for="personname">ФИО:</label>
+        <input type="text" name="personname"
+               class="form-control"
+               placeholder="Введите ФИО"
+               id="personname" value="{{ employee.personname|default:'' }}"/>
+    </div>
+    <div class="form-group">
+        <label for="birthdate">Дата рождения ГГГГ-ММ-ДД:</label>
+        <input type="text" name="birthdate"
+               class="form-control"
+               placeholder="Введите дату рождения"
+               id="birthdate" value="{{ employee.birthdate|default:''|date:"Y-m-d" }}"/>
+    </div>
+    <div class="form-group">
+        <label for="email">Email-адрес:</label>
+        <input type="text" name="email"
+               class="form-control"
+               placeholder="person@example.com"
+               id="email" value="{{ employee.email|default:'' }}"/>
+    </div>
+    <div class="form-group">
+        <label for="jobposition">Должность:</label>
+        <input type="text" name="jobposition"
+               class="form-control"
+               placeholder="Вахтер"
+               id="jobposition" value="{{ employee.jobposition|default:'' }}"/>
+    </div>
+    <input type="hidden" name="tablenumber" value="{{ employee.tablenumber|default:'' }}"/>
+    <input type="hidden" name="depatment" value="{{ employee.department.number|default:'' }}"/>
+    <input type="hidden" name="depno" value="{{ department.number|default:'' }}"/>
+    <input class="btn btn-primary" type="submit" value="Сохранить"/>
+</form>
+{% else %}
+<p> Что-то не так с данными по отделу сотрудника. Обратитесь к администратору. </p>
+{% endif %}
+{% else %}
+<p>Сотрудник не найден!</p>
+{% endif %}
+
+{% endblock %}
+
+```
+
+Форма добавления нового сотрудника - отображение формы. Отличие от предыдущего представления изменен процесс порождения данных контекста: сотрудник - новый пустой объект, данные отдела получаются из параметра. Интерфейс пользователя реализован при помощи предыдущего HTML-шаблона.
 
 ```python
 def emp_new(request, depno):
@@ -849,7 +965,7 @@ def emp_new(request, depno):
     return render(request, "emp/empview.html", context)
 ```
 
-Процедура добавления/изменения сотрудника, которая запускается из вышеуказанных форм ввода данных.
+Процедура добавления/изменения сотрудника, которая запускается из вышеуказанных форм ввода данных. По идее, эта процедура играет роль ```Controller```, еслирассматривать интерфейс в рамках модели MVC (https://ru.wikipedia.org/wiki/Model-View-Controller). Собственно, здесь видно, что модели интерфейса Django трудно однозначно отнести к MVC, MVVM, MVP (https://ru.wikipedia.org/wiki/Model-View-Presenter) и другим вариантам реализации.
 
 ```python
 def emp_store(request, tablenumber):
@@ -927,7 +1043,7 @@ def namedtuplefetchall(cursor, fields = [], f=None):
 
 ## Порождение выходных документов
 
-Вывод отчета по количеству сотруднков в отделе/отделах. Вариант отчета зависит от параметра ```depno```.
+Вывод отчета по количеству сотруднков в отделе/отделах. Вариант отчета зависит от параметра ```depno```. Перед выводом в HTML-шаблон экземпляры дополнительно размечаются - указывается кортеж, идущий последним в списке кортежей (данных о сотруднике), относящихся к одному отделу.
 
 ```python
 def dep_rep(request, depno):
@@ -966,6 +1082,101 @@ def dep_rep(request, depno):
         return render(request, "emp/deprep.html", context)
 ```
 
+Шаблон представления реультата отчета (не зависит от варианта Выходного документа 1). Контекстом документа является результат выполнения запроса (встроенной функции ```"COUNT_EMP_IN_DEPS"(...)```). Встроенная ```pgplsql```-функция в PostgreSQL выполняется в запросе ```SELECT ... FROM <вызов функции> ...``` и, соответственно, возвращает таблицу. Как было сказано чуть выше, таблица преобразуется в набор классов, что позвояет с коретжами обращатся аналогично моделям Djabgo внутри HTML-шаблона. После помеченных кортежей (поле ```last```) добавляется строка с итогом по отделу (код между метками (*)).
+
+```html
+<!-- emp/deprep.html -->
+{% extends "base.html" %}
+{% block content %}
+
+{% if result %}
+
+{% if department is not None %}
+<H>Отчет по отделу {{ depatment.name }}</H>
+{% else %}
+<H>Отчет по всем отделам</H>
+{% endif %}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">ФИО</th>
+            <th scope="col">Дата рождения</th>
+            <th scope="col">Email</th>
+            <th scope="col">Должность</th>
+            {% if department is None %}
+            <th scope="col">Отдел</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+  {% for e in result %}
+  <tr><td>{{e.tablenumber}}</td>
+      <td>
+      <a href="/emp/employee/{{ e.tablenumber }}/">{{ e.personname }}</a>
+      </td>
+      <td>
+        {{e.birthdate}}
+      </td>
+      <td>
+        {{e.email}}
+      </td>
+      <td>
+        {{e.jobposition}}
+      </td>
+      {% if department is None %}
+      <td>{{e.name}}</td>
+      {% endif %}
+  </tr>
+  {% if e.last %} <!-- (*) -->
+  <tr>
+    <td></td>
+    <td><strong>Всего</strong></td>
+    <td></td>
+    <td></td>
+    <td>{{e.countemps}}</td>
+    {% if department is None %}
+    <td></td>
+    {% endif %}
+  </tr>
+  {% endif %}     <!-- (*) -->
+  {% endfor %}
+  </tbody>
+</table>
+
+{% else %}
+<p> Пустой отчет, видимо нет сотрудников в отделе ... </p>
+{% endif %}
+{% endblock %}
+```
+
+(скрин)
+
+## UML-модели полученной клиентской подсистемы
+
+(USE-case - диаграма)
+
+(Диаграмма "классов")
+
+(необходимо мне доделать, а вам сделать.)
+
+# Заключение
+
+В результате выполнения ряда лабораторных работ по курсу "Базы данных" решены следующие задачи
+
+1. Изучена предметная область реляционных баз данных;
+2. Представлена в виде информационной модели задача лабораторной работы (вариант ХХ). Для этого
+
+   * осуществлен анализ вербального (словесного) представления задачи,
+   * разработана ER-диаграмма представления данных для реляционной БД,
+   * преобразование ER-диаграммы в физическую модель БД,
+   * представлены варианты начального заполнения таблиц БД данными;
+
+3. Разработана (сгенерирована и доработана) структура БД (набор запросов DDL);
+4. Осуществлен ввод первоначальных данных;
+5. Разработаны и протестированы представления, встроенные процедуры и функции на сервере (серверная част гипотетической инфорационной системы);
+6. Создана клиентская подсистема на основе Django-4.0, позволяющая получать входные данные от пользователя и производить внесение изменений в
 
 # Ипользованные ресурсы
 (это не надо в отчет, пример оформления не соответствует ГОСТ)
@@ -978,3 +1189,4 @@ def dep_rep(request, depno):
 5. Документация по Django - https://docs.djangoproject.com/en/4.2/
 6. Генератор проектов Django - https://cookiecutter-django.readthedocs.io/en/latest/developing-locally.html
 7. Модель представления (публикации) объектов MVVM - https://ru.wikipedia.org/wiki/Model-View-ViewModel
+8. UMLET - система для рисования диаграмм UML - https://www.umlet.com/
