@@ -724,6 +724,8 @@ urlpatterns = [
 
 ## Представления интерфейса таблиц/объектов БД
 
+Модель представления объектов предметной области, реализованная в Django, близка к Model-View-ViewModel (MVVM) (https://ru.wikipedia.org/wiki/Model-View-ViewModel).
+
 ### Файл обработиков запросов ```views.py```
 
 Преабула файла - импорт используемых библиотек.
@@ -765,30 +767,91 @@ def index(request):
 
 Представление ```index``` содержит только стандартный первый параметр ```request```, содержвщий полную информацию о запросе с вебраузера клиента. Дополнительных пераметров не предусмотрено, т.к. домашняя страница приложения ```emp``` не подразумевает какого-либо коннтекста, т.е. эта страница предназначена для ввода самого первого действия пользователя.
 
+В данном интерфейсе список отделов представляется в виде таблицы. В каждую стоку добавляются кнопки перехода на формы, реализующиеоперации с данными таблицы отделов. Используется общий шаблон, в функции кторого входит отображение сообщений об шибках и успешно выполненных операциях.
+
+```html
+<!-- emp/departments.html -->
+{% extends "base.html" %}
+{% block content %}
+
+{% if departments %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th scope="col">Название</th>
+            <th scope="col"></th>
+            <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody>
+  {% for d in departments %}
+  <tr>
+    <td><a href="/emp/department/{{ d.number }}/">{{ d.name }}</a></td>
+    <td>
+      <div class="btn-group" role="group" aria-label="bg-editing">
+        <a class="btn btn-primary"
+           href="/emp/department/{{ d.number }}">Редактировать</a>
+        <a class="btn btn-danger"
+           href="/emp/department-rm/{{ d.number }}/0">Удалить</a>
+      </div>
+    </td>
+    <td><a href="/emp/department-report/{{ d.number }}/" class="btn btn-secondary">Отчет</a></td>
+  </tr>
+  {% endfor %}
+  <tr>
+      <td></td>
+      <td><a href="/emp/department-report/0/" class="btn btn-secondary">Отчет по всем отделам</a></td>
+      <td><a href="/emp/department-add/" class="btn btn-success">Добавить отдел</a></td>
+  </tr>
+  </tbody>
+</table>
+{% else %}
+<p>Отделы еще не заданы! {{ departments }}</p>
+{% endif %}
+{% endblock %}
+
+```
+
+(вставить примеры скринов)
+
+
+Перечень сотрудников отдела определяется ```UUID```-номером отдела, который является дополнительным параметром, получаемым из интерфейса, ```HTML```-страницы.
 
 ```pyhon
 def emp_index(request, number):
     """Страница списка сотрудников отдела"""
-    department = get_object_or_404(Department, number=number)
-    employees = Employee.objects.filter(department__exact=department)
+    department = get_object_or_404(Department, number=number) # получить отдел по номеру, либо
+                                                              # переход на страницу 404
+    employees = Employee.objects.filter(department__exact=department) # Выбор сотрудников отдела
     context = {"employees": employees, "department": department}
     return render(request, "emp/emplist.html", context)
+```
 
+Просмотр и редактирование сотрудника - отображение формы.
 
+```pyton
 def emp_view(request, tablenumber):
     """Форма - редактор сотрудника"""
     employee = Employee.objects.get(tablenumber__exact=tablenumber)
     department = Department.objects.get(number__exact=employee.department.number)
     context = {"employee": employee, "department": department}
     return render(request, "emp/empview.html", context)
+```
 
+Форма добавления нового сотрудника - отображение формы. Отличие от предыдущего представления изменен процесс порождения данных контекста: сотрудник - новый пустой объект, данные отдела получаются из параметра.
+
+```python
 def emp_new(request, depno):
     """Форма - добавления нового сотрудника"""
     employee = Employee(tablenumber=0)
     department = Department.objects.get(number__exact=depno)
     context = {"employee": employee, "department": department}
     return render(request, "emp/empview.html", context)
+```
 
+Процедура добавления/изменения сотрудника, которая запускается из вышеуказанных форм ввода данных.
+
+```python
 def emp_store(request, tablenumber):
     """Процедура сохранения данных сотрудника"""
     flds='personname birthdate email jobposition tablenumber'
@@ -818,8 +881,11 @@ def emp_store(request, tablenumber):
 
     return HttpResponseRedirect(reverse("dep_index"))
     # return HttpResponseRedirect(reverse("emp_view"), args=(tablenumber,))
+```
 
+Данное представление поддерживает работу формы удаления. Отличие от предыдущих - двухэтапный процесс: 1) вывод данных о сотруднике и 2) подтверждение удаления. Фаза процесса определяется параметром ```confirm```.
 
+```python
 def emp_rm(request, tablenumber, confirm):
     """Форма-запрос на подтверждение удаления сотрудника """
     if confirm!=1:
@@ -837,8 +903,11 @@ def emp_rm(request, tablenumber, confirm):
             except InternalError as e:
                 msg = str(e).split("CONTEXT")[0]
                 messages.error(request, msg)
+```
 
+Функция, представляющая результаты запроса ```SELECT ...``` в виде набора экземпляров класса.
 
+```python
 def namedtuplefetchall(cursor, fields = [], f=None):
     """
     Return all rows from a cursor as a namedtuple.
@@ -854,9 +923,13 @@ def namedtuplefetchall(cursor, fields = [], f=None):
         else:
             return ntr
     return [_(row) for row in cursor.fetchall()]
+```
 
+## Порождение выходных документов
 
+Вывод отчета по количеству сотруднков в отделе/отделах. Вариант отчета зависит от параметра ```depno```.
 
+```python
 def dep_rep(request, depno):
     """Report 1 generator for a departement or departments.
     If depno == 0 generate for all the departments
@@ -867,7 +940,7 @@ def dep_rep(request, depno):
         department = Department.objects.get(number__exact=depno)
         filter = True
     except ValidationError:
-        depno="285242ac-fa97-4ccb-b56f-000000000000"
+        depno="285242ac-fa97-4ccb-b56f-000000000000" # невозможный UUID
         pass
 
     with connection.cursor() as cursor:
@@ -894,15 +967,8 @@ def dep_rep(request, depno):
 ```
 
 
-
-(доделаю, допишу)
-
-## Порождение выходных документов
-
-(аналогично)
-
 # Ипользованные ресурсы
-(это не надо в отчет)
+(это не надо в отчет, пример оформления не соответствует ГОСТ)
 
 0. Zerotier VPN https://www.zerotier.com/ (номер сети не публикую здесь)
 1. PgAdmin4 - http://192.168.191.46:8888/ (пользователь ```stud@isu.ru```)
@@ -911,3 +977,4 @@ def dep_rep(request, depno):
 4. Проект https://github.com/stud-labs/django-db/ (Django 4.0)
 5. Документация по Django - https://docs.djangoproject.com/en/4.2/
 6. Генератор проектов Django - https://cookiecutter-django.readthedocs.io/en/latest/developing-locally.html
+7. Модель представления (публикации) объектов MVVM - https://ru.wikipedia.org/wiki/Model-View-ViewModel
