@@ -17,10 +17,13 @@ Moved to [settings](http://cookiecutter-django.readthedocs.io/en/latest/settings
 Сначала установить виртуальную среду Python
 
 ```bash
+# Клонируем дистр
 cd djabgo-db
 pip install -r requirements/local.txt  # для запуска проекта локально
 npm install                            # установка поддержки веббраузера
 npm run build                          # создание ресурсов webpack
+# Запуск сервера (локального)
+python manage.py runserver 0.0.0.0:8898 
 ```
 
 ## Basic Commands
